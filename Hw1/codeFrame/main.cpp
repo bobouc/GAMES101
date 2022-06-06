@@ -33,6 +33,24 @@ Eigen::Matrix4f get_model_matrix(float rotation_angle)
     model = translate * model;
     return model;
 }
+//rotation with any axis.
+Eigen::Matrix4f get_any_rotation(Vector3f axis,float rotation_angle)
+{
+    Eigen::Matrix4f model = Eigen::Matrix4f::Identity();
+    Eigen::Matrix3f temp = Eigen::Matrix3f::Identity();
+    float ag = rotation_angle/180*MY_PI;
+    Eigen::Matrix3f tr;
+    Eigen::Matrix3f mul;
+    mul << 0, -axis[2], axis[1],
+        axis[2], 0, -axis[0],
+        -axis[1], axis[0], 0;
+    tr = cos(ag)*temp + (1-cos(ag))*axis*axis.adjoint() + mul*sin(ag);
+    model << tr(0,0), tr(0,1), tr(0,2), 0,
+            tr(1,0), tr(1,1), tr(1,2), 0,
+            tr(2,0), tr(2,1), tr(2,2), 0,
+            0, 0, 0, 1;
+    return model;
+}
 
 Eigen::Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio,
                                       float zNear, float zFar)
@@ -101,11 +119,13 @@ int main(int argc, const char** argv)
 
     int key = 0;
     int frame_count = 0;
-
+    Eigen::Vector3f axis ;
+    axis<< 0, 1, 0;
     if (command_line) {
         r.clear(rst::Buffers::Color | rst::Buffers::Depth);
 
-        r.set_model(get_model_matrix(angle));
+        // r.set_model(get_model_matrix(angle));
+        r.set_model(get_any_rotation(axis,angle));
         r.set_view(get_view_matrix(eye_pos));
         r.set_projection(get_projection_matrix(45, 1, 0.1, 50));
 
@@ -121,7 +141,8 @@ int main(int argc, const char** argv)
     while (key != 27) {
         r.clear(rst::Buffers::Color | rst::Buffers::Depth);
 
-        r.set_model(get_model_matrix(angle));
+        // r.set_model(get_model_matrix(angle));
+        r.set_model(get_any_rotation(axis,angle));
         r.set_view(get_view_matrix(eye_pos));
         r.set_projection(get_projection_matrix(45, 1, 0.1, 50));
 
