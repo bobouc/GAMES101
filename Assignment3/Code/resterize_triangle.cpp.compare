@@ -1,0 +1,42 @@
+auto v = t.toVector4();
+    float min_x = std::min(v[0][0], std::min(v[1][0], v[2][0]));
+    float max_x = std::max(v[0][0], std::max(v[1][0], v[2][0]));
+    float min_y = std::min(v[0][1], std::min(v[1][1], v[2][1]));
+    float max_y = std::max(v[0][1], std::max(v[1][1], v[2][1]));
+
+    min_x = (int)std::floor(min_x);
+    max_x = (int)std::ceil(max_x);
+    min_y = (int)std::floor(min_y);
+    max_y = (int)std::ceil(max_y);
+
+    for (int x = min_x; x <= max_x; x++) {
+            for (int y = min_y; y <= max_y; y++) {
+                if (insideTriangle(x,y,t.v)) {
+                    auto tup = computeBarycentric2D((float)x + 0.5, (float)y + 0.5, t.v);
+                    float alpha;
+                    float beta;
+                    float gamma;
+                    std::tie(alpha, beta, gamma) = tup;
+
+                    float w_reciprocal = 1.0 / (alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
+                    float z_interpolated = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
+                    z_interpolated *= w_reciprocal;
+
+                    float weight = 1;
+
+                    auto interpolated_color = interpolate(alpha,beta,gamma,t.color[0],t.color[1],t.color[2],weight);
+                    auto interpolated_normal =interpolate(alpha,beta,gamma,t.normal[0],t.normal[1],t.normal[2],weight);
+                    auto interpolated_texcoords = interpolate(alpha,beta,gamma,t.tex_coords[0],t.tex_coords[1],t.tex_coords[2],weight);
+                    auto interpolated_shadingcoords = interpolate(alpha,beta,gamma,view_pos[0],view_pos[1],view_pos[2],weight);
+                    fragment_shader_payload payload( interpolated_color, interpolated_normal.normalized(), interpolated_texcoords, texture ? &*texture : nullptr);
+                    payload.view_pos = interpolated_shadingcoords;
+                    auto pixel_color = fragment_shader(payload);
+                    if (depth_buf[get_index(x, y)] > z_interpolated) {
+                        Vector2i point;
+                        point << x,y;
+                        depth_buf[get_index(x, y)] = z_interpolated;
+                        set_pixel(point, pixel_color);
+                    }
+                }
+            }
+        }
